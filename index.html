@@ -11,6 +11,7 @@
   .resultaat { background:#f6f6f6; padding:15px; margin-top:25px; border:1px solid #ccc; }
   .csv-knop { display:block; margin:22px 0 0 0; background:#44c; color:white; border:none; padding:9px 16px; border-radius:5px; font-size:1em; cursor:pointer; }
   .meta-invoer { margin-bottom: 18px; }
+  textarea#csvdata { display:none; }
 </style>
 <script>
 function likert(name) {
@@ -54,7 +55,7 @@ function voegScoresAanFormulierToe(form, respondentID, antwoorden, waardenResult
   while (form.querySelector('.toemail')) {
     form.querySelector('.toemail').remove();
   }
-  // Stuur antwoorden als gewenst, of laat dit weg als je privacy wilt
+  // Stuur antwoorden als gewenst
   for(let i=1;i<=57;i++) {
     let input = document.createElement('input');
     input.type = 'hidden';
@@ -90,7 +91,28 @@ function voegScoresAanFormulierToe(form, respondentID, antwoorden, waardenResult
   form.appendChild(tijd);
 }
 
-// Bij submit: bereken, voeg toe, en submit het formulier
+// Maak CSV tekst van antwoorden en scores
+function maakCSV(antwoorden, waardenResultaten, hogereResultaten) {
+  let csv = [];
+  // Eerste regel: kolomnamen
+  let header = ['Type','Naam','Waarde'];
+  csv.push(header.join(','));
+  // Antwoorden
+  for(let i=1; i<=57; i++) {
+    csv.push(['Antwoord', 'Vraag_'+i, antwoorden['q'+i]].join(','));
+  }
+  // Scores
+  for(let key in waardenResultaten) {
+    csv.push(['Score', key, waardenResultaten[key]].join(','));
+  }
+  // Hogere orde scores
+  for(let key in hogereResultaten) {
+    csv.push(['Hogere_orde_score', key, hogereResultaten[key]].join(','));
+  }
+  return csv.join('\r\n');
+}
+
+// Bij submit: bereken, voeg toe, maak CSV en verstuur
 function berekenEnVerstuur(event) {
   event.preventDefault(); // Eerst valideren en verwerken
   let form = event.target;
@@ -130,7 +152,12 @@ function berekenEnVerstuur(event) {
   // Voeg alles toe als hidden inputs
   voegScoresAanFormulierToe(form, respondentID, antwoorden, waardenResultaten, hogereResultaten);
 
-  // Optioneel (enkel als je resultaat live wilt tonen - mag je weghalen)
+  // Maak CSV en stop in verborgen textarea
+  let csvtekst = maakCSV(antwoorden, waardenResultaten, hogereResultaten);
+  let csvveld = document.getElementById('csvdata');
+  csvveld.value = csvtekst;
+
+  // Optioneel (enkel als je resultaat live wilt tonen)
   let out = '<div class="resultaat"><h3>Scores per Waarde</h3><ul>';
   for (let key in waardenResultaten) out += `<li><strong>${key}:</strong> ${waardenResultaten[key]}</li>`;
   out += '</ul><h3>Hogere-orde waarden</h3><ul>';
@@ -224,10 +251,12 @@ function berekenEnVerstuur(event) {
       container.appendChild(blok);
     });
   </script>
+
+  <!-- Verborgen textarea voor CSV data -->
+  <textarea id="csvdata" name="CSV_data"></textarea>
+
   <button class="csv-knop" type="submit">Verzend antwoorden</button>
 </form>
 <div id="uitslag"></div>
 </body>
 </html>
-
-
